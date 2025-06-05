@@ -33,7 +33,6 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
     if not values or len(values) < 2:
         return {"error": "Keine Daten"}
 
-    # Entferne BOM + Anführungszeichen
     headers = [h.replace('\ufeff', '').strip('"') for h in values[0]]
     data = values[1:]
 
@@ -41,6 +40,7 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
         asin_col = headers.index("ASIN")
         date_col = headers.index("Date")
         sales_col = headers.index("SalesOrganic")
+        ppc_col = headers.index("SalesPPC")
     except ValueError as e:
         return {"error": f"Spalte fehlt: {e}", "headers": headers}
 
@@ -48,15 +48,14 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
     matched = 0
 
     for row in data:
-        if len(row) <= max(asin_col, date_col, sales_col):
+        if len(row) <= max(asin_col, date_col, sales_col, ppc_col):
             continue
         try:
             if row[asin_col] != asin:
                 continue
 
-            # Konvertiere deutsches Datum (z. B. 04.06.2025) in ISO-Format
+            # Datum konvertieren (deutsch → ISO)
             row_date_obj = datetime.strptime(row[date_col], "%d.%m.%Y").date()
-
             if datum:
                 if row_date_obj.isoformat() != datum:
                     continue
@@ -64,22 +63,20 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
                 if row_date_obj != datetime.today().date():
                     continue
 
-            ppc_col = headers.index("SalesPPC")
-            sales_organic = row[sales_col].replace(",", ".")
-            sales_ppc = row[ppc_col].replace(",", ".")
-            total += float(sales_organic) + float(sales_ppc)
+            sales_organic = float(row[sales_col].replace(",", "."))
+            sales_ppc = float(row[ppc_col].replace(",", "."))
+            total += sales_organic + sales_ppc
             matched += 1
         except Exception:
-            continue  # Fehlerhafte Zeile ignorieren
+            continue
 
     return {
         "asin": asin,
         "datum": datum or datetime.today().isoformat(),
         "umsatz": round(total, 2),
-        "zeilen_gefunden": matched,
+        "zeilen_gefunden": matched
     }
 
-# Debug-Endpunkt, um Header zu inspizieren
 @app.get("/debug")
 def debug_headers():
     values = get_sheet_data()
