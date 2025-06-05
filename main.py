@@ -33,7 +33,7 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
     if not values or len(values) < 2:
         return {"error": "Keine Daten"}
 
-    # Entfernt unsichtbares BOM + Anführungszeichen
+    # Entferne BOM + Anführungszeichen
     headers = [h.replace('\ufeff', '').strip('"') for h in values[0]]
     data = values[1:]
 
@@ -46,42 +46,37 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
 
     total = 0.0
     matched = 0
+
     for row in data:
         if len(row) <= max(asin_col, date_col, sales_col):
             continue
         try:
             if row[asin_col] != asin:
                 continue
-            from datetime import datetime
 
-# ...
+            # Konvertiere deutsches Datum (z. B. 04.06.2025) in ISO-Format
+            row_date_obj = datetime.strptime(row[date_col], "%d.%m.%Y").date()
 
             if datum:
-                # Konvertiere 04.06.2025 → 2025-06-04 für Vergleich
-                try:
-                    row_date_obj = datetime.strptime(row[date_col], "%d.%m.%Y").date()
-                    if row_date_obj.isoformat() != datum:
-                        continue
-                except ValueError:
+                if row_date_obj.isoformat() != datum:
                     continue
             else:
-                # Wenn kein Datum angegeben: vergleiche mit heute
-                try:
-                    row_date_obj = datetime.strptime(row[date_col], "%d.%m.%Y").date()
-                    if row_date_obj != datetime.today().date():
-                        continue
-                except ValueError:
+                if row_date_obj != datetime.today().date():
                     continue
 
+            total += float(row[sales_col].replace(",", "."))
+            matched += 1
+        except Exception:
+            continue  # Fehlerhafte Zeile ignorieren
 
     return {
         "asin": asin,
-        "datum": datum or "gestern",
+        "datum": datum or datetime.today().isoformat(),
         "umsatz": round(total, 2),
         "zeilen_gefunden": matched,
     }
 
-# Optional: Debug-Endpunkt zum Anzeigen der Headerstruktur
+# Debug-Endpunkt, um Header zu inspizieren
 @app.get("/debug")
 def debug_headers():
     values = get_sheet_data()
