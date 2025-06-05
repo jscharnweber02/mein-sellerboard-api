@@ -64,7 +64,10 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
                 if row_date_obj != datetime.today().date():
                     continue
 
-            total += float(row[sales_col].replace(",", "."))
+            ppc_col = headers.index("SalesPPC")
+            sales_organic = row[sales_col].replace(",", ".")
+            sales_ppc = row[ppc_col].replace(",", ".")
+            total += float(sales_organic) + float(sales_ppc)
             matched += 1
         except Exception:
             continue  # Fehlerhafte Zeile ignorieren
