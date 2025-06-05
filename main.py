@@ -33,6 +33,7 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
     if not values or len(values) < 2:
         return {"error": "Keine Daten"}
 
+    # Entfernt Anführungszeichen in den Spaltenüberschriften (wie "Date")
     headers = [h.strip('"') for h in values[0]]
     data = values[1:]
 
