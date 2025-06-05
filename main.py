@@ -33,7 +33,8 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
     if not values or len(values) < 2:
         return {"error": "Keine Daten"}
 
-    headers = [h.strip('"') for h in values[0]]  # Anführungszeichen entfernen
+    # Entfernt unsichtbares BOM + Anführungszeichen
+    headers = [h.replace('\ufeff', '').strip('"') for h in values[0]]
     data = values[1:]
 
     try:
@@ -65,10 +66,13 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
         "zeilen_gefunden": matched,
     }
 
-# NEU: Debug-Endpunkt
+# Optional: Debug-Endpunkt zum Anzeigen der Headerstruktur
 @app.get("/debug")
 def debug_headers():
     values = get_sheet_data()
     if not values:
         return {"error": "No data"}
-    return {"headers_raw": values[0], "headers_cleaned": [h.strip('"') for h in values[0]]}
+    return {
+        "headers_raw": values[0],
+        "headers_cleaned": [h.replace('\ufeff', '').strip('"') for h in values[0]]
+    }
