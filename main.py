@@ -52,12 +52,27 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
         try:
             if row[asin_col] != asin:
                 continue
-            if datum and row[date_col] != datum:
-                continue
-            total += float(row[sales_col].replace(",", "."))
-            matched += 1
-        except:
-            continue
+            from datetime import datetime
+
+# ...
+
+            if datum:
+                # Konvertiere 04.06.2025 → 2025-06-04 für Vergleich
+                try:
+                    row_date_obj = datetime.strptime(row[date_col], "%d.%m.%Y").date()
+                    if row_date_obj.isoformat() != datum:
+                        continue
+                except ValueError:
+                    continue
+            else:
+                # Wenn kein Datum angegeben: vergleiche mit heute
+                try:
+                    row_date_obj = datetime.strptime(row[date_col], "%d.%m.%Y").date()
+                    if row_date_obj != datetime.today().date():
+                        continue
+                except ValueError:
+                    continue
+
 
     return {
         "asin": asin,
