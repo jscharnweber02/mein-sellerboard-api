@@ -33,8 +33,7 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
     if not values or len(values) < 2:
         return {"error": "Keine Daten"}
 
-    # Entfernt Anführungszeichen in den Spaltenüberschriften (wie "Date")
-    headers = [h.strip('"') for h in values[0]]
+    headers = [h.strip('"') for h in values[0]]  # Anführungszeichen entfernen
     data = values[1:]
 
     try:
@@ -42,7 +41,7 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
         date_col = headers.index("Date")
         sales_col = headers.index("SalesOrganic")
     except ValueError as e:
-        return {"error": f"Spalte fehlt: {e}"}
+        return {"error": f"Spalte fehlt: {e}", "headers": headers}
 
     total = 0.0
     matched = 0
@@ -65,3 +64,11 @@ def get_umsatz(asin: str = Query(...), datum: str = Query(default=None)):
         "umsatz": round(total, 2),
         "zeilen_gefunden": matched,
     }
+
+# NEU: Debug-Endpunkt
+@app.get("/debug")
+def debug_headers():
+    values = get_sheet_data()
+    if not values:
+        return {"error": "No data"}
+    return {"headers_raw": values[0], "headers_cleaned": [h.strip('"') for h in values[0]]}
